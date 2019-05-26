@@ -54,21 +54,34 @@ func encodeIntArray(intArray: [UInt8]) -> [UInt8] {
     return encodedIntArray
 }
 
+// Helper function to combine the two DER Integers into a DER SEQUENCE
+func createSequence(exponent: [UInt8]?, modulus: [UInt8]?) -> [UInt8] {
+    var sequenceEncoded: [UInt8] = []
+    
+    if modulus != nil && exponent != nil {
+        sequenceEncoded.append(0x30)
+        sequenceEncoded.append(contentsOf: lengthField(of: (modulus! + exponent!)))
+        sequenceEncoded.append(contentsOf: (modulus! + exponent!))
+    }
+    
+    return sequenceEncoded
+}
+
 // Helper function to parse the response JSON object
-func parseResponseJSON(responseJSON: [String: Any]) {
+func parseResponseJSON(responseJSON: [String: Any]) -> ([UInt8], [UInt8], String)? {
     var exponentEncoded: [UInt8]? = nil
     var modulusArray: [UInt8]? = nil
     var modulusEncoded: [UInt8]? = nil
 
     // Convert modulus and exponent from base10 to BigUInt: https://github.com/attaswift/BigInt
     guard let exponent = BigUInt(responseJSON["exponent"] as! String) else {
-        return
+        return nil
     }
     guard let modulus = BigUInt(responseJSON["modulus"] as! String) else {
-        return
+        return nil
     }
     guard let prefix = responseJSON["prefix"] as? String else {
-        return
+        return nil
     }
     print("exponent:", exponent, "\nmodulus:", modulus, "\nprefix:", prefix, "\n")
     
@@ -80,6 +93,8 @@ func parseResponseJSON(responseJSON: [String: Any]) {
         modulusArray!.insert(0x00, at: 0)
     }
     modulusEncoded = encodeIntArray(intArray: modulusArray!)
+    
+    return (exponentEncoded!, modulusEncoded!, prefix)
 }
 
 // GET /v2/merchant/{mId}/pay/key for the encryption information needed for the pay endpoint
@@ -129,7 +144,9 @@ func main() throws {
         throw ConfigError.emptyOrderId
     } else {
         getEncryptionInfo(finished: { responseJSON in
-            parseResponseJSON(responseJSON: responseJSON)
+            let (exponent, modulus, prefix) = (parseResponseJSON(responseJSON: responseJSON))!
+            let sequence = createSequence(exponent: exponent, modulus: modulus)
+//            print(exponent, modulus, prefix)
         })
     }
 }
