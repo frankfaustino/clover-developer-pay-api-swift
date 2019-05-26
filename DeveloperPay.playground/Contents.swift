@@ -20,6 +20,22 @@ let expYear = 2018
 let cvv = 123
 let zipCode = 94085
 
+// Helper function to parse the response JSON object
+func parseResponseJSON(responseJSON: [String: Any]) {
+    // Convert modulus and exponent from base10 to BigInt: https://github.com/attaswift/BigInt
+    guard let exponent = BigUInt(responseJSON["exponent"] as! String) else {
+        return
+    }
+    guard let modulus = BigUInt(responseJSON["modulus"] as! String) else {
+        return
+    }
+    guard let prefix = responseJSON["prefix"] as? String else {
+        return
+    }
+    
+    print("exponent:", exponent, "\nmodulus:", modulus, "\nprefix:", prefix, "\n")
+}
+
 // GET /v2/merchant/{mId}/pay/key for the encryption information needed for the pay endpoint
 func getEncryptionInfo() {
     let url = targetEnv + v2MerchantPath + merchantId + "/pay/key"
@@ -37,7 +53,8 @@ func getEncryptionInfo() {
         }
         let responseJSON = try? JSONSerialization.jsonObject(with: data, options: [])
         if let responseJSON = responseJSON as? [String: Any] {
-            print("GET Response: \n", responseJSON, "\n")
+            print("GET Response: \n")
+            parseResponseJSON(responseJSON: responseJSON)
         }
     }
     
