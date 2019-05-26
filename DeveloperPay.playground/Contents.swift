@@ -20,6 +20,31 @@ let expYear = 2018
 let cvv = 123
 let zipCode = 94085
 
+// GET /v2/merchant/{mId}/pay/key for the encryption information needed for the pay endpoint
+func getEncryptionInfo() {
+    let url = targetEnv + v2MerchantPath + merchantId + "/pay/key"
+    print("Authorization: Bearer " + accessToken + "\n")
+    print("GET Request: " + url + "\n")
+    
+    var request = URLRequest(url: URL(string: url)!)
+    request.httpMethod = "GET"
+    request.addValue("Bearer " + accessToken, forHTTPHeaderField: "Authorization")
+    
+    let task = URLSession.shared.dataTask(with: request) { data, response, error in
+        guard let data = data, error == nil else {
+            print(error?.localizedDescription ?? "No data")
+            return
+        }
+        let responseJSON = try? JSONSerialization.jsonObject(with: data, options: [])
+        if let responseJSON = responseJSON as? [String: Any] {
+            print("GET Response: \n", responseJSON, "\n")
+        }
+    }
+    
+    task.resume()
+}
+
+
 enum ConfigError: Error {
     case emptyAccesToken
     case emptyMerchantId
@@ -34,6 +59,8 @@ func configCheck() throws {
         throw ConfigError.emptyMerchantId
     } else if orderId.isEmpty {
         throw ConfigError.emptyOrderId
+    } else {
+        getEncryptionInfo()
     }
 }
 
