@@ -20,9 +20,47 @@ let expYear = 2018
 let cvv = 123
 let zipCode = 94085
 
+// Helper function to compute the length field of a DER type: https://docs.microsoft.com/en-us/windows/desktop/SecCertEnroll/about-der-encoding-of-asn-1-types
+func lengthField(of valueField: [UInt8]) -> [UInt8] {
+    var count = valueField.count
+    
+    if count < 128 {
+        return [UInt8(count)]
+    }
+    
+    let lengthBytesCount = Int((log2(Double(count)) / 8) + 1)
+    let firstLengthFieldByte = UInt8(128 + lengthBytesCount)
+    var lengthField: [UInt8] = []
+    
+    for _ in 0..<lengthBytesCount {
+        let lengthByte = UInt8(count & 0xff)
+        lengthField.insert(lengthByte, at: 0)
+        count = count >> 8
+    }
+    
+    lengthField.insert(firstLengthFieldByte, at: 0)
+    
+    return lengthField
+}
+
+// Helper function to encode modulus and exponent into DER INTEGERs
+func encodeIntArray(intArray: [UInt8]) -> [UInt8] {
+    var encodedIntArray: [UInt8] = []
+    
+    encodedIntArray.append(0x02)
+    encodedIntArray.append(contentsOf: lengthField(of: intArray))
+    encodedIntArray.append(contentsOf: intArray)
+    
+    return encodedIntArray
+}
+
 // Helper function to parse the response JSON object
 func parseResponseJSON(responseJSON: [String: Any]) {
-    // Convert modulus and exponent from base10 to BigInt: https://github.com/attaswift/BigInt
+    var exponentEncoded: [UInt8]? = nil
+    var modulusArray: [UInt8]? = nil
+    var modulusEncoded: [UInt8]? = nil
+
+    // Convert modulus and exponent from base10 to BigUInt: https://github.com/attaswift/BigInt
     guard let exponent = BigUInt(responseJSON["exponent"] as! String) else {
         return
     }
@@ -32,8 +70,16 @@ func parseResponseJSON(responseJSON: [String: Any]) {
     guard let prefix = responseJSON["prefix"] as? String else {
         return
     }
-    
     print("exponent:", exponent, "\nmodulus:", modulus, "\nprefix:", prefix, "\n")
+    
+    // Convert modulus and exponent from BigUInt into unsigned big-endian octet representation
+    exponentEncoded = encodeIntArray(intArray: Array(exponent.serialize()))
+    if modulusArray == nil {
+        modulusArray = Array(modulus.serialize())
+        // Prefix modulus with 0x00 to indicate that it is a non-negative number: https://msdn.microsoft.com/en-us/library/windows/desktop/bb540806(v=vs.85).aspx
+        modulusArray!.insert(0x00, at: 0)
+    }
+    modulusEncoded = encodeIntArray(intArray: modulusArray!)
 }
 
 // GET /v2/merchant/{mId}/pay/key for the encryption information needed for the pay endpoint
