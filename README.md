@@ -2,6 +2,7 @@
 
 ## Requirements
 
+- Mac OSX 10.14.3
 - Xcode 10.2.1  
 - CocoaPods 1.5.3
 - CocoaPods Downloader 1.2.0 
@@ -54,7 +55,7 @@ pod install
 
 Open `DeveloperPay.xcworkspace` in Xcode.
 
-Once `DeveloperPay.xcworkspace` is open, edit `DeveloperPay.playground` config variables to include your own test Merchant ID, an Order ID belonging to that Merchant, and the OAuth token you created.
+Once `DeveloperPay.xcworkspace` is open, select `DeveloperPay.playground` and edit the config variables to include your own test Merchant ID, an Order ID belonging to that Merchant, and the OAuth token you created.
 
 ## Running the Script
 
